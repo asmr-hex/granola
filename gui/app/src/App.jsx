@@ -1,5 +1,7 @@
 import React, {Component} from 'react'
 import {render} from 'react-dom'
+import {ipcRenderer} from 'electron'
+
 import Logo from './components/Logo/'
 import Link from './components/Link/'
 
@@ -15,6 +17,18 @@ const logos = [
 
 
 export default class App extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      TestText: "COOL" 
+    }
+  }
+  
+  submit() {
+    const result = ipcRenderer.sendSync('HI', 'ping')
+    this.setState({TestText: result})
+  }
+  
     render() {
         const logosRender = logos.map( (logo, index) => {
             return <Logo key = {index} src = { logo } />
@@ -45,7 +59,9 @@ export default class App extends Component {
                   BLAH BLAH OKOKOK
                 </p>
 
-              
+              <button onClick={() => this.submit()}>CLICK</button>
+
+              <p>{this.state.TestText}</p>
                 <p>
                     Check out the docs for&nbsp;
                     <Link to='https://electronjs.org/docs'>Electron</Link>,&nbsp;

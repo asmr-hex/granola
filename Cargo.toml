@@ -1,0 +1,7 @@
+[package]
+name = "op"
+version = "0.1.0"
+authors = ["connorwalsh <c@polygon.pizza>"]
+edition = "2018"
+
+[dependencies]
