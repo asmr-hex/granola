@@ -49,7 +49,13 @@ app.on('ready', () => {
 
     // listen for responses from backend and send directly to renderer process
     synthClient.on('data', (data) => {
-      mainWindow.webContents.send(RENDER_TO_MAIN_IPC_CHAN, data.toString() + "!!!!")
+      // parse the incoming data to send the updates to the appropriate component
+      // each incoming message should be a JSON object where the top level keys are the
+      // ids of the components which need to be updated.
+      jsonData = JSON.parse(data)
+      for (const component in jsonData) {
+        mainWindow.webContents.send(component, JSON.stringify(jsonData[component])) 
+      }
     })
     
     // listen for incoming ipc from renderer process
