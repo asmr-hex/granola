@@ -10,33 +10,53 @@ require('electron-reload')(__dirname)
 
 // To avoid being garbage collected
 let mainWindow
+let synthClient
+
+const SynthBackend = {
+  host: 'localhost',
+  port: 3333,
+}
+
+const DefaultWindowConfig = {
+  width: 800,
+  height: 600,
+}
+
+const RENDER_TO_MAIN_IPC_CHAN = 'update'
 
 // start synth process
-// spawn('cargo', ['run', '..'])
+spawn('cargo', ['run', '..'])
 
 app.on('ready', () => {
 
   // create socket to backend process
   synthClient = net.Socket()
 
-  // TODO: add retry logic to block until connected to backend
-  synthClient.connect({host:'localhost', port:3333},  () => {
-    console.log('connected to server!');
-  });
-
-
-  // setup main windows
-  mainWindow = new BrowserWindow({width: 800, height: 600})
-  mainWindow.loadURL(`file://${__dirname}/app/index.html`)
-
-  // listen for responses from backend and send directly to renderer
-  synthClient.on('data', (data) => {
-    mainWindow.webContents.send('update', data.toString() + "!!!!")
+  // if there is an error connecting, retry connecting
+  synthClient.on('error', (error) => {
+    synthClient.connect(SynthBackend);  
   })
   
-  // listen for incoming ipc from renderer
-  ipcMain.on('update', (event, data) => {
-    // on each incoming message, relay directly to the backend.
-    synthClient.write(data)
+  // attempt to connect
+  synthClient.connect(SynthBackend);
+
+  synthClient.on('connect', () => {
+    // we are now connected to the synth backend
+    
+    // setup main windows
+    mainWindow = new BrowserWindow(DefaultWindowConfig)
+    mainWindow.loadURL(`file://${__dirname}/app/index.html`)
+
+    // listen for responses from backend and send directly to renderer process
+    synthClient.on('data', (data) => {
+      mainWindow.webContents.send(RENDER_TO_MAIN_IPC_CHAN, data.toString() + "!!!!")
+    })
+    
+    // listen for incoming ipc from renderer process
+    ipcMain.on(RENDER_TO_MAIN_IPC_CHAN, (event, data) => {
+      // on each incoming message, relay directly to the synth backend.
+      synthClient.write(data)
+    })    
   })
 })
+
