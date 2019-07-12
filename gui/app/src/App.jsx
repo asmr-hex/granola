@@ -22,11 +22,14 @@ export default class App extends Component {
     this.state = {
       TestText: "COOL" 
     }
+
+    ipcRenderer.on('update', (event, data) => {
+      this.setState({TestText: data})
+    })
   }
   
   submit() {
-    const result = ipcRenderer.sendSync('HI', 'ping')
-    this.setState({TestText: result})
+    ipcRenderer.send('update', 'GOOGOO')
   }
   
     render() {
