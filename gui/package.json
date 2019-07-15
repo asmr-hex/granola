@@ -1,15 +1,15 @@
 {
-  "name": "electron-react-webpack",
+  "name": "op_gui",
   "version": "1.0.0",
-  "description": "Electron + React 16 + Webpack 4 template.",
+  "description": "graphical user interface for op synth.",
   "main": "main_process.js",
   "scripts": {
     "bundle": "webpack --mode development",
     "serve": "electron .",
-    "start": "npm-run-all --parallel bundle serve"
+    "start": "npm-run-all --parallel bundle serve",
+    "install": "electron-rebuild"
   },
-  "author": "J. Renato Ramos González <renato.etc.etc.etc@gmail.com>",
-  "repository": "pastahito/electron-react-webpack",
+  "author": "coco",
   "license": "WTFPL",
   "devDependencies": {
     "babel-core": "^6.26.0",
@@ -18,8 +18,9 @@
     "babel-preset-react": "^6.24.1",
     "babel-preset-stage-0": "^6.24.1",
     "css-loader": "^0.28.10",
-    "electron": "^1.8.2",
-    "electron-reload": "^1.2.2",
+    "electron": "^5.0.6",
+    "electron-rebuild": "^1.8.5",
+    "electron-reload": "^1.4.1",
     "extract-text-webpack-plugin": "^4.0.0-beta.0",
     "file-loader": "^1.1.10",
     "npm-run-all": "^4.1.2",
@@ -28,6 +29,7 @@
   },
   "dependencies": {
     "lodash": "^4.17.14",
+    "osc": "^2.3.1",
     "react": "^16.2.0",
     "react-dom": "^16.2.0"
   }
