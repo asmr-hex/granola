@@ -11,7 +11,7 @@ require('electron-reload')(__dirname)
 
 // To avoid being garbage collected
 let mainWindow
-let updClient
+let udpClient
 
 const UDPClient = {
   host: '0.0.0.0',
@@ -34,31 +34,80 @@ const DefaultWindowConfig = {
 const RENDER_TO_MAIN_IPC_CHAN = 'update'
 
 // start synth process
-spawn('cargo', ['run', '..'])
+// spawn('cargo', ['run', '..'])
+
+// promise-based retries.
+const retry = (fn, retries = 5, delay=1000) =>
+      fn().catch(err => retries > 1
+                 ? new Promise(resolve => setTimeout(resolve, delay))
+                 .then(() => {
+                   console.log('retrying connection to backend...')
+                   return retry(fn, retries - 1)
+                 })
+                 : Promise.reject(err))
+
+
+// initiate a simple SYN-ACK handshake over UDP to ensure that the backend
+// is running before we begin.
+const handshakeWithBackend = async (socket) => {
+  let success = false
+  let maxRetries = 3
+  
+  // setup ACK listener for backend.
+  socket.on("bundle", (oscBundle, timeTag, info) => {
+    // set success flag!
+    success = true
+    console.log("Remote: ", info)
+  })
+
+  const connectToBackend = () => new Promise((resolve, reject) => {
+    // send SYN message to initiate handshake.
+    socket.send(
+      {
+        address: '/shakehands',
+        args: [
+          {type: 'f', value: 'SYN'},
+        ],
+      },
+    )
+   
+    if (success) {
+      resolve()
+    } else {
+      reject(Error("failed to establish connection to backend."))
+    }
+  })
+
+  // block until we connect to the backend.
+  await retry(connectToBackend, 10)
+    .then(() => console.log("successfully connected to backend."))
+    .catch(err => console.error(err))
+}
 
 app.on('ready', () => {
-
-  // create socket to backend process
-  // synthClient = net.Socket()
 
   // create a UDP OSC client
   udpClient = new osc.UDPPort({
     localAddress: UDPClient.host,
     localPort: UDPClient.port,
+    remoteAddress: UDPBackend.host,
+    remotePort: UDPBackend.port,
     metadata: true
   })
-
-  // Listen for incoming OSC bundles.
-  udpClient.on("bundle", (oscBundle, timeTag, info) => {
-    console.log("An OSC bundle just arrived for time tag", timeTag, ":", oscBundle);
-    console.log("Remote info is: ", info);
-  })
+  
+  // // Listen for incoming OSC bundles.
+  // udpClient.on("bundle", (oscBundle, timeTag, info) => {
+  //   console.log("An OSC bundle just arrived for time tag", timeTag, ":", oscBundle);
+  //   console.log("Remote info is: ", info);
+  // })
   
   // open client UDP port
   udpClient.open()
 
   udpClient.on("ready", () => {
     // we are now connected to the synth backend
+
+    handshakeWithBackend(udpClient)
     
     // setup main windows
     mainWindow = new BrowserWindow(DefaultWindowConfig)
