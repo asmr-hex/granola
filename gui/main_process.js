@@ -34,7 +34,7 @@ const DefaultWindowConfig = {
 const RENDER_TO_MAIN_IPC_CHAN = 'update'
 
 // start synth process
-// spawn('cargo', ['run', '..'])
+spawn('cargo', ['run', '..'])
 
 // promise-based retries.
 const retry = (fn, retries = 5, delay=1000) =>
@@ -54,7 +54,7 @@ const handshakeWithBackend = async (socket) => {
   let maxRetries = 3
   
   // setup ACK listener for backend.
-  socket.on("bundle", (oscBundle, timeTag, info) => {
+  socket.on("osc", (oscMessage, timeTag, info) => {
     // set success flag!
     success = true
     console.log("Remote: ", info)
@@ -64,7 +64,7 @@ const handshakeWithBackend = async (socket) => {
     // send SYN message to initiate handshake.
     socket.send(
       {
-        address: '/shakehands',
+        address: '/handshake',
         args: [
           {type: 'f', value: 'SYN'},
         ],
@@ -104,10 +104,11 @@ app.on('ready', () => {
   // open client UDP port
   udpClient.open()
 
-  udpClient.on("ready", () => {
+  udpClient.on("ready", async () => {
     // we are now connected to the synth backend
 
-    handshakeWithBackend(udpClient)
+    // block until we've connected to the backend.
+    await handshakeWithBackend(udpClient)
     
     // setup main windows
     mainWindow = new BrowserWindow(DefaultWindowConfig)

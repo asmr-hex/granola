@@ -1,7 +1,13 @@
+extern crate rosc;
+
 use std::io;
 use std::str;
 use std::thread;
 use std::net::{UdpSocket,SocketAddr};
+
+// osc
+use rosc::encoder;
+use rosc::{OscPacket, OscMessage, OscType};
 
 
 fn ack_client(socket: &UdpSocket) -> io::Result<SocketAddr> {
@@ -11,7 +17,11 @@ fn ack_client(socket: &UdpSocket) -> io::Result<SocketAddr> {
     match socket.recv_from(&mut buf) {
         Ok((_, src)) => {
             // acknowledge client.
-            match socket.send_to("ACK".as_bytes(), src) {
+            let ack_msg = encoder::encode(&OscPacket::Message(OscMessage {
+                addr: "/handshake".to_string(),
+                args: Some(vec![OscType::String("ACK".to_string())]),
+            })).unwrap();
+            match socket.send_to(&ack_msg, src) {
                 Ok(_) => {
                     println!("successfully acknowledged client {}", src);
                     return Ok(src);
