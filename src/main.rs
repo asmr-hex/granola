@@ -1,42 +1,49 @@
+use std::io;
+use std::str;
 use std::thread;
-use std::net::{UdpSocket, SocketAddrV4};
-use std::io::{Read, Write};
+use std::net::{UdpSocket,SocketAddr};
 
-fn handle_client(mut stream: TcpStream) {
-    let mut data = [0 as u8; 50]; // using 50 byte buffer
-    while match stream.read(&mut data) {
-        Ok(size) => {
-            // echo everything!
-            stream.write(&data[0..size]).unwrap();
-            true
+
+fn ack_client(socket: &UdpSocket) -> io::Result<SocketAddr> {
+    let mut buf = [0; 2048];
+
+    // wait for a heartbeat from udp client
+    match socket.recv_from(&mut buf) {
+        Ok((_, src)) => {
+            // acknowledge client.
+            match socket.send_to("ACK".as_bytes(), src) {
+                Ok(_) => {
+                    println!("successfully acknowledged client {}", src);
+                    return Ok(src);
+                },
+                Err(e) => return Err(e),
+            }
         },
-        Err(_) => {
-            println!("An error occurred, terminating connection with {}", stream.peer_addr().unwrap());
-            stream.shutdown(Shutdown::Both).unwrap();
-            false
-        }
-    } {}
-}
-
-fn listen(socket: &net::UdpSocket, mut buffer: &mut [u8]) -> usize {
-
-    let (number_of_bytes, src_addr) = socket.recv_from(&mut buffer).expect("no data received");
-
-    println!("{:?}", number_of_bytes);
-    println!("{:?}", src_addr);
-
-    // do more stuff
-
-    number_of_bytes
+        Err(e) => return Err(e),
+    }
 }
 
 fn main() {
     let socket = UdpSocket::bind("0.0.0.0:3333").expect("failed to bind to host socket!");
+
+    println!("listening on 0.0.0.0:3333...");
     
-    let mut buf: Vec<u8> = Vec::with_capacity(100);
+    // wait for heartbeat from client before beginning
+    ack_client(&socket).expect("failed to acknowledge client.");
+    
+    let mut buf = [0; 2048];
     loop {
-        while listen(&socket, &mut buf != 0) {
-            
+        match socket.recv_from(&mut buf) {
+            Ok((amt, src)) => {
+                thread::spawn(move || {
+                    println!("amt: {}", amt);
+                    println!("src: {}", src);
+                    println!("{}", str::from_utf8(&buf).unwrap_or(""));
+                });
+            },
+            Err(e) => {
+                println!("couldn't receive a datagram: {}", e);
+            }
         }
     }
 
