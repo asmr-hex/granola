@@ -5,3 +5,5 @@ authors = ["connorwalsh <c@polygon.pizza>"]
 edition = "2018"
 
 [dependencies]
+rosc = "~0.1"
+tokio = "0.1"
